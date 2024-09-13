@@ -1,3 +1,92 @@
+const express = require('express');
+const { FieldValue } = require('firebase-admin/firestore');
+const cors = require('cors');
+const admin = require('firebase-admin');
+const session = require('express-session');
+const passport = require('passport');
+const swaggerjsdoc = require('swagger-jsdoc');
+const swaggerui = require('swagger-ui-express');
+const fs = require('fs');
+require('dotenv').config();
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+const { db } = require('./database/firebase.js');
+
+// Routes
+const userRoute = require('./routes/user.js');
+const volunteerRoute = require('./routes/volunteer.js');
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(session({
+  secret: 'secret',
+  resave: false,
+  saveUninitialized: false
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+
+// API routes
+app.use('/user', userRoute);
+app.use('/volunteer', volunteerRoute);
+
+// Swagger setup
+const options = {
+  definition: {
+    openapi: "3.0.0",
+    info: {
+      title: "HELPER",
+      description: "Mobile App"
+    },
+    servers: [
+      {
+        url: "http://localhost:3000",
+      },
+    ],
+  },
+  apis: ["./routes/*.js"],
+};
+
+const specs = swaggerjsdoc(options);
+app.use('/api-docs', swaggerui.serve, swaggerui.setup(specs));
+
+// API endpoints
+app.get('/users', async (req, res) => {
+  try {
+    const UserRef = db.collection('Users');
+    const users = await UserRef.get();
+    if (users.empty) {
+      return res.status(400).send({ error: 'No users found' });
+    }
+    const usersList = [];
+    users.forEach(doc => {
+      const user = doc.data();
+      user.id = doc.id;
+      usersList.push(user);
+    });
+    res.status(200).send(usersList);
+  } catch (error) {
+    console.error('Error in finding users', error);
+    res.status(500).send({ error: 'Server error' });
+  }
+});
+
+// Add more API endpoints as needed
+
+app.listen(port, () => {
+  console.log(`Server has started on port: ${port}`);
+});
+
+
+
+
+
+
+
+/*
 const express = require('express')
 const { FieldValue } = require('firebase-admin/firestore')
 
@@ -50,9 +139,9 @@ app.use('/volunteer', volunteerRoute);
 
 
 // Página Inicial (Escolher User ou Volunteer)
-/*router.get('/', (req, res) => {
-  });
-*/
+//router.get('/', (req, res) => {
+//  });
+
   
 //-----------------------------------------------------------------------------------------------------------------------
 //métodos com a base de dados
@@ -241,3 +330,6 @@ fs.writeFileSync('./openapi.json', JSON.stringify(specs, null, 2));
 
 
 app.listen(port, '0.0.0.0', () => console.log(`Server has started on port: ${port}`))
+
+
+*/
