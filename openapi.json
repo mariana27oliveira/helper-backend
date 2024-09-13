@@ -486,6 +486,90 @@
         }
       }
     },
+    "/user/finished_request/{requestId}": {
+      "get": {
+        "summary": "Get finished request details and review information",
+        "tags": [
+          "Requests"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "requestId",
+            "required": true,
+            "description": "The ID of the request to fetch details for",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Request details and review retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Timestamp": {
+                      "type": "string",
+                      "description": "The timestamp of when the request was made"
+                    },
+                    "Status": {
+                      "type": "string",
+                      "description": "The status of the request"
+                    },
+                    "AcceptedTime": {
+                      "type": "string",
+                      "description": "The time when the request was accepted"
+                    },
+                    "FinishedTime": {
+                      "type": "string",
+                      "description": "The time when the request was finished"
+                    },
+                    "Duration": {
+                      "type": "string",
+                      "description": "The total duration of the request"
+                    },
+                    "Location": {
+                      "type": "string",
+                      "description": "The address of the request location"
+                    },
+                    "VolunteerName": {
+                      "type": "string",
+                      "description": "The name of the volunteer who received the review"
+                    },
+                    "Review": {
+                      "type": "object",
+                      "description": "The review details for the request (if available)",
+                      "properties": {
+                        "Feedback": {
+                          "type": "string",
+                          "description": "The feedback given by the user"
+                        },
+                        "Rating": {
+                          "type": "number",
+                          "description": "The rating given by the user (1-5)"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or request is not in a finished state"
+          },
+          "404": {
+            "description": "Request not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
     "/user/profile/{userId}": {
       "get": {
         "summary": "Get user information",
