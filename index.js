@@ -1,7 +1,6 @@
+// index.js
 const express = require('express');
-const { FieldValue } = require('firebase-admin/firestore');
 const cors = require('cors');
-const admin = require('firebase-admin');
 const session = require('express-session');
 const passport = require('passport');
 const swaggerjsdoc = require('swagger-jsdoc');
@@ -12,14 +11,23 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-const { db } = require('./database/firebase.js');
+// Define o middleware CORS
+const allowCors = fn => async (req, res) => {
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*'); // Pode substituir '*' por 'req.headers.origin' se desejar permitir apenas o domínio de origem.
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  return await fn(req, res);
+};
 
-// Routes
-const userRoute = require('./routes/user.js');
-const volunteerRoute = require('./routes/volunteer.js');
-
-// Middleware
-app.use(cors());
+// Middleware e rotas
 app.use(express.json());
 app.use(session({
   secret: 'secret',
@@ -29,9 +37,12 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// API routes
-app.use('/user', userRoute);
-app.use('/volunteer', volunteerRoute);
+// Define suas rotas aqui
+const userRoute = require('./routes/user.js');
+const volunteerRoute = require('./routes/volunteer.js');
+
+app.use('/user', allowCors(userRoute));
+app.use('/volunteer', allowCors(volunteerRoute));
 
 // Swagger setup
 const options = {
@@ -54,7 +65,7 @@ const specs = swaggerjsdoc(options);
 app.use('/api-docs', swaggerui.serve, swaggerui.setup(specs));
 
 // API endpoints
-app.get('/users', async (req, res) => {
+app.get('/users', allowCors(async (req, res) => {
   try {
     const UserRef = db.collection('Users');
     const users = await UserRef.get();
@@ -72,15 +83,11 @@ app.get('/users', async (req, res) => {
     console.error('Error in finding users', error);
     res.status(500).send({ error: 'Server error' });
   }
-});
-
-// Add more API endpoints as needed
+}));
 
 app.listen(port, () => {
   console.log(`Server has started on port: ${port}`);
 });
-
-
 
 
 
