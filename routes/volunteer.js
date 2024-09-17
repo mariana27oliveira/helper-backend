@@ -698,11 +698,11 @@ router.post('/forgot_password_3/:volunteerId', async (req, res) => {
 
 
 // GET ACTIVE REQUESTS (Status: 'pendent')
-router.post('/activeRequests/:volunteerId', async (req, res) => {
-//router.post('/activeRequests', authenticateToken, async (req, res) => {
+//router.post('/activeRequests/:volunteerId', async (req, res) => {
+router.post('/activeRequests', authenticateToken, async (req, res) => {
     try {
-        //const volunteerId = req.volunteer.VolunteerId;
-        const volunteerId = req.params.volunteerId;
+        const volunteerId = req.volunteer.VolunteerId;
+        //const volunteerId = req.params.volunteerId;
 
         // Receber a localização enviada pelo frontend
         const { latitude, longitude } = req.body;
@@ -728,8 +728,13 @@ router.post('/activeRequests/:volunteerId', async (req, res) => {
         // Chamar API do Nominatim para obter a cidade e o país
         const geocodingApiUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${volunteerLat}&lon=${volunteerLng}`;
 
-        const geoResponse = await fetch(geocodingApiUrl);
-        const geoData = await geoResponse.json();
+        const geoResponse = await axios.get(geocodingApiUrl, {
+            headers: {
+                'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' // Substitua pelo nome do seu app e email
+            }
+        });
+
+        const geoData = geoResponse.data;
 
         let city = 'Unknown City';
         let country = 'Unknown Country';
@@ -1159,8 +1164,11 @@ router.get('/requests', authenticateToken, async (req, res) => {
         }
 
         // Get address from OpenStreetMap Nominatim API
-        const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${Location.latitude}&lon=${Location.longitude}`);
-        
+        const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`, {
+            headers: {
+              'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' // Substitua pelo nome do seu app e email
+            }
+          });          
         if (response.data) {
             const address = response.data.display_name;
             const formattedTimestamp = DateTime.fromMillis(Timestamp._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss');
@@ -1647,8 +1655,12 @@ router.get('/finished_request/:requestId', async (req, res) => {
         const { latitude, longitude } = requestData.Location;
         let address = 'Unknown location';
         try {
-            const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`);
-            if (response.data && response.data.display_name) {
+            const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`, {
+                headers: {
+                  'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' // Substitua pelo nome do seu app e email
+                }
+              });
+                          if (response.data && response.data.display_name) {
                 address = response.data.display_name;
             }
         } catch (error) {
@@ -2232,8 +2244,12 @@ router.get('/history', authenticateToken, async (req, res) => {
             const { latitude, longitude } = request.Location;
             let address = 'Unknown location';
             try {
-                const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`);
-                if (response.data) {
+                const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`, {
+                    headers: {
+                      'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' // Substitua pelo nome do seu app e email
+                    }
+                  });                
+                  if (response.data) {
                     address = response.data.display_name;
                 }
             } catch (error) {
