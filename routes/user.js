@@ -41,7 +41,7 @@ function authenticateToken(req, res, next) {
 
     jwt.verify(token, secretKey, (err, decoded) => {
         if (err) return res.status(401).send({ error: 'Failed to authenticate token' });
-        req.user = decoded; // O objeto decoded contém UserId e outros dados do payload
+        req.user = decoded; // Decoded object has UserId 
         next();
     });
 }
@@ -191,7 +191,6 @@ router.post('/signup', async (req, res) => {
             return res.status(400).send({ error: 'Invalid email format.' });
         }*/
 
-        // Verificação das senhas
         if (Password !== ConfirmPassword) {
             return res.status(400).send({ error: 'Passwords do not match.' });
         }
@@ -333,7 +332,7 @@ router.patch('/add/:googleId', async (req, res) => {
             return res.status(400).send({ error: 'Incomplete Google user data' });
         }
     
-        // Criar novo documento na collection 'users'
+        // Creates new document in "Users" collection
         await db.collection('Users').doc(googleId).set({
           name: googleUserData.displayName,
           email: googleUserData.email,
@@ -419,16 +418,15 @@ router.post('/login', async (req, res) => {
 
 const nodemailer = require('nodemailer');
 
-// Configuração do transportador de e-mail
 const transporter = nodemailer.createTransport({
-    service: 'Gmail', // Ou qualquer outro serviço de e-mail
+    service: 'Gmail', // It can be other service
     auth: {
         user: 'helper.mobile.app.2024@gmail.com',
         pass: 'tgtp uvwq btrk mcad'
     }
 });
 
-// Função para enviar e-mail
+// Function to sent the email
 const sendEmail = async (to, subject, text) => {
     try {
         await transporter.sendMail({
@@ -496,14 +494,14 @@ router.post('/forgot_password_1', async (req, res) => {
         const userDoc = userSnapshot.docs[0];
         const userId = userDoc.id;
 
-        // Gerar um código de verificação
-        const verificationCode = Math.floor(1000 + Math.random() * 9000); // Código de 4 dígitos
+        // Generates a verification code
+        const verificationCode = Math.floor(1000 + Math.random() * 9000); // 4 digit code
         console.log(`Generated verification code: ${verificationCode}`);
 
-        // Armazenar o código de verificação no banco de dados
+        // Stores the code in the database
         await db.collection('Users').doc(userId).update({ verificationCode });
 
-        // Enviar o e-mail com o código de verificação
+        // Send the verification code
         await sendEmail(
             Email,
             'Password Recovery Code',
@@ -522,20 +520,20 @@ router.post('/forgot_password_1', async (req, res) => {
 router.post('/forgot_password_2', async (req, res) => {
     try {
         const { userId, verificationCode } = req.body;
-        console.log(`Verification attempt for userId: ${userId} with code: ${verificationCode}`); // Log de tentativa de verificação
-        // Verificar se o código corresponde ao código armazenado para o usuário
+        console.log(`Verification attempt for userId: ${userId} with code: ${verificationCode}`); 
+        // Verifies if the code matches the one stored in the database 
         const userDoc = await db.collection('Users').doc(userId).get();
         if (!userDoc.exists) {
             return res.status(404).send({ error: 'User not found' });
         }
 
         const userData = userDoc.data();
-        console.log(`Stored verification code: ${userData.verificationCode}, Provided code: ${verificationCode}`); // Log do código armazenado e do código fornecido
+        console.log(`Stored verification code: ${userData.verificationCode}, Provided code: ${verificationCode}`); 
         if (userData.verificationCode != verificationCode) {
             return res.status(400).send({ error: 'Invalid verification code' });
         }
 
-        // Se o código for válido, limpe o código de verificação
+        // If the code is valid, the code stored in the database is deleted 
         await db.collection('Users').doc(userId).update({ verificationCode: null });
 
         return res.status(200).send({ message: 'Verification code valid' });
@@ -661,7 +659,7 @@ router.post('/forgot_password_3/:userId', async (req, res) => {
  */
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371; // Raio da Terra em km
+    const R = 6371; 
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
@@ -716,7 +714,7 @@ router.post('/newRequest', authenticateToken, async (req, res) => {
         await Promise.all(volunteersSnapshot.docs.map(async (doc) => {
             const volunteerLocation = doc.data().Location;
             const distance = calculateDistance(requestLocation.latitude, requestLocation.longitude, volunteerLocation.latitude, volunteerLocation.longitude);
-            if (distance <= 1) { // Se a distância for menor ou igual a 1 km
+            if (distance <= 1) { // If the distance is inferior to 1 km
                 nearbyVolunteers.push(doc.id); // Adds volunteer id to the list 
 
                 // Gets the FCM token of the volunteer
@@ -855,7 +853,7 @@ router.get('/requests', authenticateToken, async (req, res) => {
         
         const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${Location.latitude}&lon=${Location.longitude}`, {
             headers: {
-              'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' // Substitua pelo nome do seu app e email
+              'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' 
             }
           });         
         if (response.data) {
@@ -879,63 +877,6 @@ router.get('/requests', authenticateToken, async (req, res) => {
     }
 });
 
-
-/*
-
-//SEE REQUEST INFORMATION (USERID, TIMESTAMP, STATUS, LOCATION, VOLUNTEERID) - API GOOGLE
-router.get('/requests/:requestId', async (req, res) => {
-    try {
-        const requestId = req.params.requestId;
-        if (!requestId) {
-            return res.status(400).send({ error: 'Invalid requestId' });
-        }
-        const RequestRef = await db.collection('Requests').doc(requestId)
-        const request = await RequestRef.get();
-        if (!request.exists) {
-            return res.status(404).send({ error: 'Request not found' });
-        }
-        const requestData = request.data();
-        const { Location, Status, Timestamp } = requestData;
-        //const address = await getAddressFromCoordinates(Location.latitude, Location.longitude);
-        const formattedTimestamp = new Date(Timestamp._seconds * 1000).toUTCString();
-        const response = {
-            Location: Location,
-            Status: Status,
-            Timestamp: formattedTimestamp
-        };
-
-        res.status(200).send(response);
-    } catch (error) {
-        console.error('Error in finding request', error);
-        res.status(500).send({ error: 'Server error' });
-    }
-});
-
-
-// API DO GOOGLE Dá o erro: This API project is not authorized to use this API. Tenho de ver como ponho isto a funcionar, tentei aqui mas pede conta de faturamento https://console.cloud.google.com/apis/library/geocoding-backend.googleapis.com?hl=pt-br&project=helper-15697 
-async function getAddressFromCoordinates(latitude, longitude) {
-    const apiKey = 'AIzaSyCaP4YueP-KDuGZd-jqv9U24SSH_72ZzFs'; 
-    const apiUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`;
-    
-    try {
-        const response = await fetch(apiUrl);
-        const data = await response.json();
-        
-        if (data.status === 'OK') {
-            // Extrair o endereço formatado do objeto de resposta
-            const address = data.results[0].formatted_address;
-            return address;
-        } else {
-            console.error('Error fetching address:', data.error_message);
-            return 'Address not found';
-        }
-    } catch (error) {
-        console.error('Error fetching address:', error);
-        return 'Address not found';
-    }
-}
-
-*/
 
 /**
  * @swagger
@@ -1239,7 +1180,7 @@ router.get('/finished_request/:requestId', async (req, res) => {
         try {
             const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`, {
                 headers: {
-                  'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' // Substitua pelo nome do seu app e email
+                  'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' 
                 }
               });               
               if (response.data && response.data.display_name) {
@@ -1656,7 +1597,7 @@ router.get('/history', authenticateToken, async (req, res) => {
 
             let volunteerName = 'Unknown'; // Default value
 
-            // Verifica se VolunteerID existe no documento
+            // Verifies if VolunteerID exists in the document
             if (request.VolunteerID) {
                 try {
                     // Fetch volunteer information
@@ -1676,7 +1617,7 @@ router.get('/history', authenticateToken, async (req, res) => {
                 try {
                     const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`, {
                         headers: {
-                          'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' // Substitua pelo nome do seu app e email
+                          'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' 
                         }
                       });                    
                       if (response.data) {
@@ -1725,7 +1666,7 @@ router.post('/logout', authenticateToken, async (req, res) => {
         const batch = db.batch();
         requestsSnapshot.forEach(doc => {
             const requestRef = db.collection('Requests').doc(doc.id);
-            batch.update(requestRef, { Status: 'canceled' });
+            batch.update(requestRef, { Status: 'cancelled' });
         });
 
         await batch.commit();

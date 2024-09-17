@@ -40,28 +40,28 @@ function authenticateToken(req, res, next) {
 
     jwt.verify(token, secretKey, (err, decoded) => {
         if (err) return res.status(401).send({ error: 'Failed to authenticate token' });
-        req.volunteer = decoded; // O objeto decoded contém UserId e outros dados do payload
+        req.volunteer = decoded; // Decoded objects contains VolunteerId 
         next();
     });
 }
 
 const authenticateFCMToken = async (req, res, next) => {
     try {
-        // Obtém o cabeçalho de autorização
+        // Obtains the authorization header 
         const authHeader = req.headers['authorization'];
         const fcmToken = authHeader && authHeader.split(' ')[1];
 
-        // Verifica se o token está presente
+        // Verifies if the token is present 
         if (!fcmToken) {
             return res.sendStatus(401); // Unauthorized
         }
 
         const decodedToken = await admin.auth().verifyIdToken(fcmToken);
 
-        // Adiciona o decodedToken ao objeto req para uso posterior
-        req.volunteer = decodedToken; // O objeto decodedToken contém o ID do usuário e outros dados
+        // Adds decodedToken to the req object, to use later
+        req.volunteer = decodedToken; // Decoded object contains volunteer id
 
-        next(); // Passa para o próximo middleware ou rota
+        next(); 
     } catch (error) {
         console.error('Error in authenticateFCMToken:', error);
         res.status(401).send({ error: 'Failed to authenticate token' });
@@ -69,7 +69,7 @@ const authenticateFCMToken = async (req, res, next) => {
 };
 
 
-const loggedInVolunteers = new Set(); // Conjunto para armazenar os IDs dos voluntários logados
+const loggedInVolunteers = new Set(); // Stores the ids of the logged in volunteers 
 
 
 
@@ -151,7 +151,7 @@ router.post('/signup', async (req, res) => {
             return res.status(400).send({ error: 'Invalid email format.' });
         }
 
-        // Verificação das senhas
+        // Verifies if passwords match
         if (Password !== ConfirmPassword) {
             return res.status(400).send({ error: 'Passwords do not match.' });
         }
@@ -383,26 +383,25 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// Atualizar Token de Registro (FCM)
+// Updates registration token (FCM)
 router.post('/updateToken', authenticateFCMToken, async (req, res) => {
     try {
         const { volunteerId, fcmToken } = req.body;
 
-        // Verifica se o ID do voluntário ou o token estão ausentes
+        // Verifies if the volunteer id or token are missing 
         if (!volunteerId || !fcmToken) {
             return res.status(400).send({ error: 'Missing volunteerId or token' });
         }
 
-        // Atualiza o token FCM do voluntário no Firestore
+        // Updates fcm token of the volunteer in the database 
         await db.collection('Volunteers').doc(volunteerId).set({
             fcmToken: fcmToken
-        }, { merge: true }); // Usa 'merge: true' para atualizar sem sobrescrever outros campos
+        }, { merge: true }); // 'merge: true' - updates without overwriting 
 
-        // Resposta de sucesso
         res.status(200).send({ message: 'Token updated successfully' });
     } catch (error) {
         console.error('Error updating token', error);
-        res.status(500).send({ error: 'Server error' }); // Resposta de erro em caso de falha
+        res.status(500).send({ error: 'Server error' }); 
     }
 });
 
@@ -411,8 +410,8 @@ router.post('/updateToken', authenticateFCMToken, async (req, res) => {
 //OBTAINS LOGGED IN VOLUNTEERS 
 router.get('/loggedInVolunteers', authenticateToken, async (req, res) => {
     try {
-        // Obter a lista de IDs dos voluntários logados
-        const volunteerIDs = Array.from(loggedInVolunteers); // Converte o Set em um array
+        // Obtains the list of volunteers id that are logged in
+        const volunteerIDs = Array.from(loggedInVolunteers); 
 
         res.status(200).json(volunteerIDs);
     } catch (error) {
@@ -427,16 +426,15 @@ router.get('/loggedInVolunteers', authenticateToken, async (req, res) => {
 const nodemailer = require('nodemailer');
 
 
-// Configuração do transportador de e-mail
 const transporter = nodemailer.createTransport({
-    service: 'Gmail', // Ou qualquer outro serviço de e-mail
+    service: 'Gmail', // it can be other service
     auth: {
         user: 'helper.mobile.app.2024@gmail.com',
         pass: 'tgtp uvwq btrk mcad'
     }
 });
 
-// Função para enviar e-mail
+// Function to send the email
 const sendEmail = async (to, subject, text) => {
     try {
         await transporter.sendMail({
@@ -503,14 +501,14 @@ router.post('/forgot_password_1', async (req, res) => {
         const volunteerDoc = volunteerSnapshot.docs[0];
         const volunteerId = volunteerDoc.id;
 
-        // Gerar um código de verificação
+        // Generates a verification code 
         const verificationCode = Math.floor(1000 + Math.random() * 9000); // Código de 4 dígitos
         console.log(`Generated verification code: ${verificationCode}`);
 
-        // Armazenar o código de verificação no banco de dados
+        // Stores the verification code in the database 
         await db.collection('Volunteers').doc(volunteerId).update({ verificationCode });
 
-        // Enviar o e-mail com o código de verificação
+        // Send the verificatio conde 
         await sendEmail(
             Email,
             'Password Recovery Code',
@@ -529,20 +527,20 @@ router.post('/forgot_password_1', async (req, res) => {
 router.post('/forgot_password_2', async (req, res) => {
     try {
         const { volunteerId, verificationCode } = req.body;
-        console.log(`Verification attempt for volunteerId: ${volunteerId} with code: ${verificationCode}`); // Log de tentativa de verificação
-        // Verificar se o código corresponde ao código armazenado para o voluntário
+        console.log(`Verification attempt for volunteerId: ${volunteerId} with code: ${verificationCode}`); 
+        // Verifies if the code given matches the code stored in db 
         const volunteerDoc = await db.collection('Volunteers').doc(volunteerId).get();
         if (!volunteerDoc.exists) {
             return res.status(404).send({ error: 'Volunteer not found' });
         }
 
         const volunteerData = volunteerDoc.data();
-        console.log(`Stored verification code: ${volunteerData.verificationCode}, Provided code: ${verificationCode}`); // Log do código armazenado e do código fornecido
+        console.log(`Stored verification code: ${volunteerData.verificationCode}, Provided code: ${verificationCode}`); 
         if (volunteerData.verificationCode != verificationCode) {
             return res.status(400).send({ error: 'Invalid verification code' });
         }
 
-        // Se o código for válido, limpe o código de verificação
+        // If the code is valid, the code stored is deleted
         await db.collection('Volunteers').doc(volunteerId).update({ verificationCode: null });
 
         return res.status(200).send({ message: 'Verification code valid' });
@@ -704,11 +702,9 @@ router.post('/activeRequests', authenticateToken, async (req, res) => {
         const volunteerId = req.volunteer.VolunteerId;
         //const volunteerId = req.params.volunteerId;
 
-        // Receber a localização enviada pelo frontend
         const { latitude, longitude } = req.body;
 
 
-        // Atualizar a localização do voluntário no Firestore
         const volunteerLocationRef = db.collection('LocationVolunteers').doc(volunteerId);
         await volunteerLocationRef.set({
             Location: new admin.firestore.GeoPoint(latitude, longitude),
@@ -725,12 +721,12 @@ router.post('/activeRequests', authenticateToken, async (req, res) => {
         const volunteerLat = volunteerLocation.Location.latitude;
         const volunteerLng = volunteerLocation.Location.longitude;
 
-        // Chamar API do Nominatim para obter a cidade e o país
+        // Obtain city and country
         const geocodingApiUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${volunteerLat}&lon=${volunteerLng}`;
 
         const geoResponse = await axios.get(geocodingApiUrl, {
             headers: {
-                'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' // Substitua pelo nome do seu app e email
+                'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' 
             }
         });
 
@@ -746,7 +742,6 @@ router.post('/activeRequests', authenticateToken, async (req, res) => {
 
         // Get all active requests
         const requestsSnapshot = await db.collection('Requests').where('Status', '==', 'pendent').get();
-        // Verificar se não há pedidos pendentes
         if (requestsSnapshot.empty) {
             return res.status(200).send({
                 city: city,
@@ -1166,7 +1161,7 @@ router.get('/requests', authenticateToken, async (req, res) => {
         // Get address from OpenStreetMap Nominatim API
         const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${Location.latitude}&lon=${Location.longitude}`, {
             headers: {
-              'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' // Substitua pelo nome do seu app e email
+              'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' 
             }
           });          
         if (response.data) {
@@ -1242,7 +1237,7 @@ router.patch('/updateRequest/:requestId', authenticateToken, async (req, res) =>
         if (Status) {
             updateFields.Status = Status;
 
-            // Verifica se o status desejado é 'accepted'
+            // Verifies if status is 'accepted'
             if (Status === 'accepted') {
                 if (!req.volunteer || !req.volunteer.VolunteerId) {
                     return res.status(400).send({ error: 'Volunteer ID missing in token' });
@@ -1250,22 +1245,21 @@ router.patch('/updateRequest/:requestId', authenticateToken, async (req, res) =>
 
                 const volunteerId = req.volunteer.VolunteerId;
 
-                // Verifica se já existe outro pedido com o status 'accepted' para este voluntário
+                // Verifies if there is another request with status 'accepted' for this volunteer
                 const existingAcceptedRequest = await db.collection('Requests')
                     .where('VolunteerID', '==', volunteerId)
                     .where('Status', '==', 'accepted')
-                    .limit(1)  // Só precisa verificar se existe um
+                    .limit(1)  
                     .get();
 
                 if (!existingAcceptedRequest.empty) {
                     return res.status(400).send({ error: 'Volunteer already has an accepted request' });
                 }
 
-                // Se não existir outro pedido aceito, adiciona o acceptedTime
+                // If there is no other accepted request, adds the acceptedTime
                 updateFields.acceptedTime = new Date();
             }
 
-            // Verifica se o status desejado é 'finished'
             if (Status === 'finished') {
                 updateFields.finishedTime = new Date(); // Add finishedTime if status is finished
             }
@@ -1400,7 +1394,7 @@ router.get('/request_points_badges/:requestId', async (req, res) => {
             return res.status(400).send({ error: 'Request is not finished' });
         }
 
-        // Verifica se os pontos já foram contados
+        // Verifies if the points have already been counted 
         if (requestData.VolunteerPoints && requestData.VolunteerPoints > 0) {
             return res.status(200).send({ 
                 message: 'Points have already been awarded', 
@@ -1657,7 +1651,7 @@ router.get('/finished_request/:requestId', async (req, res) => {
         try {
             const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`, {
                 headers: {
-                  'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' // Substitua pelo nome do seu app e email
+                  'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' 
                 }
               });
                           if (response.data && response.data.display_name) {
@@ -2246,7 +2240,7 @@ router.get('/history', authenticateToken, async (req, res) => {
             try {
                 const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${Location.latitude}&lon=${Location.longitude}`, {
                     headers: {
-                      'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' // Substitua pelo nome do seu app e email
+                      'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' 
                     }
                   });                
                   if (response.data) {
@@ -2296,7 +2290,7 @@ router.post('/logout', authenticateToken, async (req, res) => {
         const batch = db.batch(); 
         requestsSnapshot.forEach(doc => {
             const requestRef = db.collection('Requests').doc(doc.id);
-            batch.update(requestRef, { Status: 'canceled' });
+            batch.update(requestRef, { Status: 'cancelled' });
         });
 
         await batch.commit();
