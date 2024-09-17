@@ -59,7 +59,7 @@ passport.use(
     new Strategy({
         clientID: "871005441383-21r86rlerhcl2tnr7hdt2fo54i32kge5.apps.googleusercontent.com",
         clientSecret: "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",
-        callbackURL: "https://1f69-144-64-20-16.ngrok-free.app/user/google/redirect",
+        callbackURL: "https://helper-backend.vercel.app/user/google/redirect",
         scope: ['profile', 'email'],
         prompt: 'select_account'  // Adicione esta linha
 }, googleVerifyFunction)
