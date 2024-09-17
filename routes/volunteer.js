@@ -1164,7 +1164,7 @@ router.get('/requests', authenticateToken, async (req, res) => {
         }
 
         // Get address from OpenStreetMap Nominatim API
-        const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`, {
+        const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${Location.latitude}&lon=${Location.longitude}`, {
             headers: {
               'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' // Substitua pelo nome do seu app e email
             }
@@ -2244,7 +2244,7 @@ router.get('/history', authenticateToken, async (req, res) => {
             const { latitude, longitude } = request.Location;
             let address = 'Unknown location';
             try {
-                const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`, {
+                const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${Location.latitude}&lon=${Location.longitude}`, {
                     headers: {
                       'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' // Substitua pelo nome do seu app e email
                     }

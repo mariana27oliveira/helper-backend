@@ -853,7 +853,7 @@ router.get('/requests', authenticateToken, async (req, res) => {
             }
         }
         
-        const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`, {
+        const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${Location.latitude}&lon=${Location.longitude}`, {
             headers: {
               'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' // Substitua pelo nome do seu app e email
             }
