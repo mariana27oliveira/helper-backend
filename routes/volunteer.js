@@ -5,7 +5,6 @@ const { db } = require('../database/firebase.js')
 const bcrypt = require('bcrypt');
 const { comparePassword } = require('../utils/hashPassword.js');
 const passport = require ('passport');
-const discordStrategy = require('../strategies/discord.js'); 
 const googleStrategy = require('../strategies/google.js');
 const axios = require('axios');
 const { format } = require('date-fns');
@@ -219,15 +218,62 @@ function isValidPhoneNumber(phone) {
     return /^\d{9}$/.test(phone);
 }
 
+let googleLocation = {};
 
-router.get('/google', passport.authenticate('google'), (req, res) => {
-    res.send(200);
-})
+router.get('/google', (req, res, next) => {
+    const { latitude, longitude } = req.query;
+    console.log(`Localização do usuário: Latitude - ${latitude}, Longitude - ${longitude}`);
+    // Armazenar a localização na sessão (ou outro lugar conforme sua lógica)
+    if (latitude && longitude) {
+        req.session.location = { latitude, longitude };
+    }
+
+    googleLocation = { latitude, longitude };
+
+    next(); // Chamar o próximo middleware para iniciar a autenticação
+}, passport.authenticate('volunteer-google'));
 
 
-router.get('/google/redirect', passport.authenticate('google'), (req, res) => {
-    res.send(200);
-})
+
+router.get('/google/redirect', passport.authenticate('volunteer-google'), async (req, res) => {
+    const { id: googleId } = req.user;
+
+    const { latitude, longitude } = googleLocation || {};
+    console.log(`Localização do usuário: Latitude - ${latitude}, Longitude - ${longitude}`);
+
+
+    if (latitude && longitude) {
+        // Converter latitude e longitude para números
+        const lat = parseFloat(latitude);
+        const lng = parseFloat(longitude);
+
+        // Verifica se os valores são números válidos
+        if (!isNaN(lat) && !isNaN(lng)) {
+            // Criar um objeto GeoPoint com latitude e longitude numéricas
+            const volunteerLocation = new admin.firestore.GeoPoint(lat, lng);
+
+            // Salvar a localização do voluntário na coleção 'LocationVolunteers'
+            await db.collection('LocationVolunteers').doc(googleId).set({
+                Location: volunteerLocation
+            });
+
+            console.log(`Localização do usuário: Latitude - ${lat}, Longitude - ${lng}`);
+        } else {
+            console.error('Latitude ou longitude inválidos.');
+        }
+    }
+
+    delete googleLocation;
+
+    // Gerar o token JWT e redirecionar
+    const token = generateAccessToken(googleId);
+    const redirectUrl = `myapp://success?id=${googleId}&token=${token}`;
+    res.redirect(redirectUrl);
+});
+
+
+
+
 
 
 /**
@@ -273,6 +319,13 @@ router.patch('/add/:googleId', async (req, res) => {
             return res.status(400).send({ error: 'Invalid googleId' });
         }
 
+
+        //Verifies if googleId already exists in "Volunteers" collection
+        const volunteerDoc = await db.collection('Volunteers').doc(googleId).get();
+        if (volunteerDoc.exists) {
+            return res.status(400).send({ error: 'This email already has an account, please go to login' });
+        }
+
         // Verifies if the PhoneContact already exists in 'Volunteers' collection
         const userWithPhoneContact = await db.collection('Volunteers')
             .where('PhoneContact', '==', PhoneContact)
@@ -290,9 +343,11 @@ router.patch('/add/:googleId', async (req, res) => {
 
         // Creates a new document in 'Volunteers' collection
         await db.collection('Volunteers').doc(googleId).set({
-          name: googleUserData.displayName,
-          email: googleUserData.email,
-          phoneContact: PhoneContact,
+          Name: googleUserData.displayName,
+          Email: googleUserData.email,
+          PhoneContact: PhoneContact,
+          Points: 0,
+          Badges: []
         });
 
     
@@ -1896,7 +1951,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
         const volunteerRef = db.collection('Volunteers').doc(volunteerId);
         const volunteerDoc = await volunteerRef.get();
         if (!volunteerDoc.exists) {
-            return res.status(404).send({ error: 'Volunteer not found' });
+            return res.status(404).send({ error: 'This email has no account, please go to signup' });
         }
 
         const volunteerData = volunteerDoc.data();

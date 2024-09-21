@@ -5,7 +5,6 @@ const { db } = require('../database/firebase.js')
 const bcrypt = require('bcrypt');
 const { comparePassword } = require('../utils/hashPassword.js');
 const passport = require ('passport');
-const discordStrategy = require('../strategies/discord.js'); 
 const googleStrategy = require('../strategies/google.js');
 const axios = require('axios');
 
@@ -244,14 +243,18 @@ function isValidPhoneNumber(phone) {
 }
 
 
-router.get('/google', passport.authenticate('google'), (req, res) => {
-    res.send(200);
-})
+router.get('/google', passport.authenticate('user-google'));
+
+router.get('/google/redirect', passport.authenticate('user-google'), async (req, res) => {
+    const { id: googleId } = req.user;
+
+    const token = generateAccessToken(googleId);
+    const redirectUrl = `myapp://success?id=${googleId}&token=${token}`; // Adiciona o token à URL
+    res.redirect(redirectUrl);
+});
 
 
-router.get('/google/redirect', passport.authenticate('google'), (req, res) => {
-    res.send(200);
-})
+
 
 
 /*
@@ -310,6 +313,12 @@ router.patch('/add/:googleId', async (req, res) => {
             return res.status(400).send({ error: 'Invalid googleId' });
         }
 
+        //Verifies if googleId already exists in "Users" collection
+        const volunteerDoc = await db.collection('Users').doc(googleId).get();
+        if (volunteerDoc.exists) {
+            return res.status(400).send({ error: 'This email already has an account, please go to login' });
+        }
+
         // Verifies if PhoneContact already exists in 'Users' collection
         const userWithPhoneContact = await db.collection('Users')
             .where('PhoneContact', '==', PhoneContact)
@@ -334,9 +343,9 @@ router.patch('/add/:googleId', async (req, res) => {
     
         // Creates new document in "Users" collection
         await db.collection('Users').doc(googleId).set({
-          name: googleUserData.displayName,
-          email: googleUserData.email,
-          phoneContact: PhoneContact,
+          Name: googleUserData.displayName,
+          Email: googleUserData.email,
+          PhoneContact: PhoneContact,
         });
 
     
@@ -685,6 +694,12 @@ router.post('/newRequest', authenticateToken, async (req, res) => {
         const UserID = req.user.UserId;
 
         console.log('Decoded UserID from token:', UserID);
+
+        // Verifies if UserID exists in "Users" collection 
+        const userDoc = await db.collection('Users').doc(UserID).get();
+            if (!userDoc.exists) {
+                return res.status(400).send({ error: 'This email has no account, please go to signup' });
+            }
 
         // Updates the location of each volunteer that is logged in
         for (const volunteer of Volunteers) {
@@ -1289,7 +1304,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
         const UserRef = await db.collection('Users').doc(userId)
         const user = await UserRef.get();
         if (!user.exists) {
-            return res.status(404).send({ error: 'User not found' });
+            return res.status(404).send({ error: 'This email has no account, please go to signup' });
         }
         const userData = user.data();
         const { Password, ...userWithoutPassword } = userData;
@@ -1548,6 +1563,9 @@ router.delete('/delete', authenticateToken, async (req, res) => {
  *               items:
  *                 type: object
  *                 properties:
+ *                   RequestID:
+ *                     type: string
+ *                     description: The ID of the request
  *                   Address:
  *                     type: string
  *                     description: The address of the request location
@@ -1572,87 +1590,77 @@ router.delete('/delete', authenticateToken, async (req, res) => {
  *         description: Server error
  */
 
-// REQUEST HISTORY (LOCATION, TIMESTAMP, VOLUNTEER, STATUS, DURATION OF EACH REQUEST)
+
+
+// REQUEST HISTORY (LOCATION, TIMESTAMP, VOLUNTEER, STATUS, DURATION OF EACH REQUEST) - Organized by Month - OpenStreetMap Nominatim API
 //router.get('/history/:userId', async (req, res) => {
-router.get('/history', authenticateToken, async (req, res) => {
-    try {
-        //const userId = req.params.userId;
-        const userId = req.user.UserId;
-
-        if (!userId) {
-            return res.status(400).send({ error: 'Invalid userId' });
-        }
-
-        const userRequestsRef = db.collection('Requests').where('UserID', '==', userId);
-        const userRequestsSnapshot = await userRequestsRef.get();
-
-        if (userRequestsSnapshot.empty) {
-            return res.status(404).send({ message: 'No requests found for the user' });
-        }
-
-        const requests = [];
-
-        for (const doc of userRequestsSnapshot.docs) {
-            const request = doc.data();
-
-            let volunteerName = 'Unknown'; // Default value
-
-            // Verifies if VolunteerID exists in the document
-            if (request.VolunteerID) {
-                try {
-                    // Fetch volunteer information
-                    const volunteerSnapshot = await db.collection('Volunteers').doc(request.VolunteerID).get();
-                    if (volunteerSnapshot.exists) {
-                        volunteerName = volunteerSnapshot.data().Name;
-                    }
-                } catch (error) {
-                    console.error(`Error fetching volunteer with ID ${request.VolunteerID}:`, error.message);
-                }
+    router.get('/history', authenticateToken, async (req, res) => {
+        try {
+            //const userId = req.params.userId;
+            const userId = req.user.UserId;
+            if (!userId) {
+                return res.status(400).send({ error: 'Invalid userId' });
             }
-
-            // Get the location address
-            const { latitude, longitude } = request.Location || {}; // Ensure Location exists
-            let address = 'Unknown location';
-            if (latitude && longitude) {
+    
+            const userRequestsRef = db.collection('Requests').where('UserID', '==', userId);
+            const userRequestsSnapshot = await userRequestsRef.get();
+    
+            if (userRequestsSnapshot.empty) {
+                return res.status(404).send({ message: 'No requests found for the user' });
+            }
+    
+            const requests = [];
+    
+            for (const doc of userRequestsSnapshot.docs) {
+                const request = doc.data();
+    
+                // Fetch volunteer information
+                const volunteerSnapshot = await db.collection('Volunteers').doc(request.VolunteerID).get();
+                request.VolunteerName = volunteerSnapshot.exists ? volunteerSnapshot.data().Name : 'Unknown';
+    
+                // Get the location address
+                const { latitude, longitude } = request.Location;
+                let address = 'Unknown location';
                 try {
-                    const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`, {
+                    const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${Location.latitude}&lon=${Location.longitude}`, {
                         headers: {
                           'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' 
                         }
-                      });                    
+                      });                
                       if (response.data) {
                         address = response.data.display_name;
                     }
                 } catch (error) {
                     console.error('Error fetching address:', error.message);
                 }
+    
+                // Format the timestamp and extract the month and year in English and uppercase
+                const formattedTimestamp = DateTime.fromMillis(request.Timestamp._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss');
+    
+                // Create the request object
+                const requestObject = {
+                    RequestID: doc.id, 
+                    Address: address,
+                    Status: request.Status,
+                    Timestamp: formattedTimestamp,
+                    Duration: request.Duration || 'N/A',
+                    VolunteerName: request.VolunteerName
+                };
+    
+                requests.push(requestObject);
             }
-
-            // Format the timestamp
-            const formattedTimestamp = DateTime.fromMillis(request.Timestamp._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss');
-
-            // Create the request object
-            const requestObject = {
-                Address: address,
-                Status: request.Status,
-                Timestamp: formattedTimestamp,
-                Duration: request.Duration || 'N/A',
-                VolunteerName: volunteerName
-            };
-
-            requests.push(requestObject);
+    
+            // Sort requests by timestamp in descending order (most recent first)
+            requests.sort((a, b) => new Date(b.Timestamp) - new Date(a.Timestamp));
+    
+    
+            res.status(200).send(requests);
+    
+        } catch (error) {
+            console.error('Error in fetching requests', error);
+            res.status(500).send({ error: 'Server error' });
         }
-
-        // Sort requests by timestamp in descending order (most recent first)
-        requests.sort((a, b) => new Date(b.Timestamp) - new Date(a.Timestamp));
-
-        res.status(200).send(requests);
-
-    } catch (error) {
-        console.error('Error in fetching requests', error);
-        res.status(500).send({ error: 'Server error' });
-    }
-});
+    });
 
 // LOGOUT
 router.post('/logout', authenticateToken, async (req, res) => {
