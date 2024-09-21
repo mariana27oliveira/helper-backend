@@ -1,20 +1,18 @@
-// index.js
+
 const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
 const passport = require('passport');
-const swaggerjsdoc = require('swagger-jsdoc');
-const swaggerui = require('swagger-ui-express');
 const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Define o middleware CORS
+// CORS
 const allowCors = fn => async (req, res) => {
   res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*'); // Pode substituir '*' por 'req.headers.origin' se desejar permitir apenas o domínio de origem.
+  res.setHeader('Access-Control-Allow-Origin', '*'); 
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
     'Access-Control-Allow-Headers',
@@ -27,7 +25,7 @@ const allowCors = fn => async (req, res) => {
   return await fn(req, res);
 };
 
-// Middleware e rotas
+// Middleware and routes
 app.use(express.json());
 app.use(session({
   secret: 'secret',
@@ -37,32 +35,12 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Define suas rotas aqui
+// routes
 const userRoute = require('./routes/user.js');
 const volunteerRoute = require('./routes/volunteer.js');
 
 app.use('/user', allowCors(userRoute));
 app.use('/volunteer', allowCors(volunteerRoute));
-
-// Swagger setup
-const options = {
-  definition: {
-    openapi: "3.0.0",
-    info: {
-      title: "HELPER",
-      description: "Mobile App"
-    },
-    servers: [
-      {
-        url: "http://localhost:3000",
-      },
-    ],
-  },
-  apis: ["./routes/*.js"],
-};
-
-const specs = swaggerjsdoc(options);
-app.use('/api-docs', swaggerui.serve, swaggerui.setup(specs));
 
 // API endpoints
 app.get('/users', allowCors(async (req, res) => {
@@ -90,14 +68,11 @@ app.listen(port, () => {
 });
 
 
-
-
-
 /*
+
 const express = require('express')
 const { FieldValue } = require('firebase-admin/firestore')
 
-//do código da ju
 const cors = require('cors');
 
 const admin = require('firebase-admin')
@@ -123,7 +98,6 @@ require('dotenv').config();
 const userRoute = require ('./routes/user.js');
 const volunteerRoute = require ('./routes/volunteer.js');
 
-//do código da ju
 app.use(cors());
 
 app.use(express.json())
@@ -145,13 +119,10 @@ app.use('/volunteer', volunteerRoute);
 
 
 
-// Página Inicial (Escolher User ou Volunteer)
-//router.get('/', (req, res) => {
-//  });
 
   
 //-----------------------------------------------------------------------------------------------------------------------
-//métodos com a base de dados
+//database methods
 
 app.get('/users', async (req, res) => {
     try {
@@ -337,6 +308,5 @@ fs.writeFileSync('./openapi.json', JSON.stringify(specs, null, 2));
 
 
 app.listen(port, '0.0.0.0', () => console.log(`Server has started on port: ${port}`))
-
 
 */

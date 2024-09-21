@@ -249,24 +249,10 @@ router.get('/google/redirect', passport.authenticate('user-google'), async (req,
     const { id: googleId } = req.user;
 
     const token = generateAccessToken(googleId);
-    const redirectUrl = `myapp://success?id=${googleId}&token=${token}`; // Adiciona o token à URL
+    const redirectUrl = `myapp://success?id=${googleId}&token=${token}`; // Adds token to the URL
     res.redirect(redirectUrl);
 });
 
-
-
-
-
-/*
-
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-
-
-
-router.get('/google/redirect', passport.authenticate('google'), (req, res) => {
-    res.send(200);
-})
-*/
 
 
 /**
@@ -422,7 +408,6 @@ router.post('/login', async (req, res) => {
         res.status(500).send({ error: 'Server error' });        
     }
 });
-
 
 
 const nodemailer = require('nodemailer');
@@ -846,9 +831,7 @@ router.get('/requests', authenticateToken, async (req, res) => {
             .limit(1) // Assuming only one request per user with status 'accepted'
             .get();
 
-        if (requestsSnapshot.empty) {
-            return res.status(404).send({ error: 'Request not found' });
-        }
+        if (!requestsSnapshot.empty) {
 
         const request = requestsSnapshot.docs[0];
         const requestData = request.data();
@@ -886,6 +869,22 @@ router.get('/requests', authenticateToken, async (req, res) => {
         } else {
             return res.status(500).send({ error: 'Failed to retrieve address' });
         }
+    }
+
+    const cancelledSnapshot = await db.collection('Requests')
+    .where('UserID', '==', userId)
+    .where('Status', '==', 'cancelled')
+    .orderBy('acceptedTime', 'desc') 
+    .limit(1)
+    .get();
+
+if (!cancelledSnapshot.empty) {
+    return res.status(200).send({ message: 'The request was cancelled' });
+}
+
+return res.status(200).send({ message: 'There is no ongoing request for this volunteer.' });
+
+
     } catch (error) {
         console.error('Error in finding request', error);
         res.status(500).send({ error: 'Server error' });
@@ -1248,8 +1247,6 @@ router.get('/finished_request/:requestId', async (req, res) => {
         res.status(500).send({ error: 'Server error' });
     }
 });
-
-
 
 
 
@@ -1662,9 +1659,69 @@ router.delete('/delete', authenticateToken, async (req, res) => {
         }
     });
 
+
+/**
+ * @swagger
+ * /user/logout/{userId}:
+ *   post:
+ *     summary: Logout a user
+ *     tags: [Authentication]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         description: ID of the user to log out
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Logged out successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Logged out successfully.
+ *       400:
+ *         description: Bad Request if userId is invalid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Invalid userId
+ *       404:
+ *         description: Not Found if userId does not exist
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: User not found
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Server error
+ */
+
+
 // LOGOUT
 router.post('/logout', authenticateToken, async (req, res) => {
+//router.post('/logout/:userId', async (req, res) => {
     const userID = req.user.UserId;
+    //const userID = req.params.userId;
 
         const requestsSnapshot = await db.collection('Requests')
             .where('UserID', '==', userID)

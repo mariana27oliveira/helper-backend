@@ -72,7 +72,6 @@ const loggedInVolunteers = new Set(); // Stores the ids of the logged in volunte
 
 
 
-
 /**
  * @swagger
  * tags:
@@ -223,14 +222,13 @@ let googleLocation = {};
 router.get('/google', (req, res, next) => {
     const { latitude, longitude } = req.query;
     console.log(`Localização do usuário: Latitude - ${latitude}, Longitude - ${longitude}`);
-    // Armazenar a localização na sessão (ou outro lugar conforme sua lógica)
     if (latitude && longitude) {
         req.session.location = { latitude, longitude };
     }
 
     googleLocation = { latitude, longitude };
 
-    next(); // Chamar o próximo middleware para iniciar a autenticação
+    next(); 
 }, passport.authenticate('volunteer-google'));
 
 
@@ -243,16 +241,14 @@ router.get('/google/redirect', passport.authenticate('volunteer-google'), async 
 
 
     if (latitude && longitude) {
-        // Converter latitude e longitude para números
+        // Converts latitude and longitude to number
         const lat = parseFloat(latitude);
         const lng = parseFloat(longitude);
 
-        // Verifica se os valores são números válidos
         if (!isNaN(lat) && !isNaN(lng)) {
-            // Criar um objeto GeoPoint com latitude e longitude numéricas
             const volunteerLocation = new admin.firestore.GeoPoint(lat, lng);
 
-            // Salvar a localização do voluntário na coleção 'LocationVolunteers'
+            // Stores the location in the 'LocationVolunteers' collection
             await db.collection('LocationVolunteers').doc(googleId).set({
                 Location: volunteerLocation
             });
@@ -265,13 +261,11 @@ router.get('/google/redirect', passport.authenticate('volunteer-google'), async 
 
     delete googleLocation;
 
-    // Gerar o token JWT e redirecionar
+    // Generates jet token and redirects 
     const token = generateAccessToken(googleId);
     const redirectUrl = `myapp://success?id=${googleId}&token=${token}`;
     res.redirect(redirectUrl);
 });
-
-
 
 
 
@@ -476,8 +470,6 @@ router.get('/loggedInVolunteers', authenticateToken, async (req, res) => {
 });
 
 
-
-
 const nodemailer = require('nodemailer');
 
 
@@ -557,7 +549,7 @@ router.post('/forgot_password_1', async (req, res) => {
         const volunteerId = volunteerDoc.id;
 
         // Generates a verification code 
-        const verificationCode = Math.floor(1000 + Math.random() * 9000); // Código de 4 dígitos
+        const verificationCode = Math.floor(1000 + Math.random() * 9000); 
         console.log(`Generated verification code: ${verificationCode}`);
 
         // Stores the verification code in the database 
@@ -1056,6 +1048,8 @@ router.get('/request_info/:requestId', authenticateToken, async (req, res) => {
 //router.get('/request_info/:volunteerId/:requestId', async (req, res) => {
     try {
         const volunteerId = req.volunteer.VolunteerId;
+        //const volunteerId = req.params.volunteerId;
+        //const requestId = req.params.requestId;
         const { requestId } = req.params;
         if (!requestId) {
             return res.status(400).send({ error: 'Invalid requestId' });
@@ -1069,6 +1063,12 @@ router.get('/request_info/:requestId', authenticateToken, async (req, res) => {
 
         const requestData = requestDoc.data();
         const { Location, Status, Timestamp, UserID } = requestData;
+
+
+        // Check if the request status is "cancelled"
+        if (Status === 'cancelled') {
+            return res.status(400).send({ error: 'The request was cancelled' });
+        }
 
         // Retrieve volunteer's location
         const volunteerLocationDoc = await db.collection('LocationVolunteers').doc(volunteerId).get();
@@ -1127,7 +1127,6 @@ router.get('/request_info/:requestId', authenticateToken, async (req, res) => {
 });
 
 
-
 /**
  * @swagger
  * /volunteer/requests/{volunteerId}:
@@ -1168,6 +1167,9 @@ router.get('/request_info/:requestId', authenticateToken, async (req, res) => {
  *                 MapLink:
  *                   type: string
  *                   description: The Google Maps link to the request location
+ *                 message:
+ *                   type: string
+ *                   description: Message indicating the status of the request (e.g., "The request was cancelled" or "There is no ongoing request for this volunteer.")
  *       400:
  *         description: Invalid volunteer ID
  *       404:
@@ -1175,6 +1177,7 @@ router.get('/request_info/:requestId', authenticateToken, async (req, res) => {
  *       500:
  *         description: Server error
  */
+
 
 
 // SEE REQUEST INFORMATION (USER NAME and CONTACT, TIMESTAMP, LOCATION, STATUS, GOOGLE MAPS LINK) - OpenStreetMap Nominatim API
@@ -1190,13 +1193,11 @@ router.get('/requests', authenticateToken, async (req, res) => {
         // Find the request by VolunteerID and status 'accepted'
         const requestsSnapshot = await db.collection('Requests')
             .where('VolunteerID', '==', volunteerId)
-            .where('Status', '==', 'accepted') // This handles the 'OR' condition
+            .where('Status', 'in', ['accepted', 'completed']) // This handles the 'OR' condition
             .limit(1) // Assuming only one request per volunteer with status 'accepted'
             .get();
-
-            if (requestsSnapshot.empty) {
-                return res.status(200).send({ message: 'There is no ongoing request for this volunteer.' });
-            }
+        
+        if (!requestsSnapshot.empty) {
 
         const request = requestsSnapshot.docs[0];
         const requestData = request.data();
@@ -1235,6 +1236,22 @@ router.get('/requests', authenticateToken, async (req, res) => {
         } else {
             return res.status(500).send({ error: 'Failed to retrieve address' });
         }
+    }
+
+        const cancelledSnapshot = await db.collection('Requests')
+            .where('VolunteerID', '==', volunteerId)
+            .where('Status', '==', 'cancelled')
+            .orderBy('acceptedTime', 'desc') 
+            .limit(1)
+            .get();
+
+        if (!cancelledSnapshot.empty) {
+            return res.status(200).send({ message: 'The request was cancelled' });
+        }
+
+        return res.status(200).send({ message: 'There is no ongoing request for this volunteer.' });
+
+
     } catch (error) {
         console.error('Error in finding request', error);
         res.status(500).send({ error: 'Server error' });
@@ -1759,8 +1776,6 @@ router.get('/finished_request/:requestId', async (req, res) => {
         res.status(500).send({ error: 'Server error' });
     }
 });
-
-
 
 
 
@@ -2332,6 +2347,65 @@ router.get('/history', authenticateToken, async (req, res) => {
         res.status(500).send({ error: 'Server error' });
     }
 });
+
+
+/**
+ * @swagger
+ * /volunteer/logout/{userId}:
+ *   post:
+ *     summary: Logout a volunteer
+ *     tags: [Authentication]
+ *     parameters:
+ *       - in: path
+ *         name: volunteerId
+ *         required: true
+ *         description: ID of the volunteer to log out
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Logged out successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Logged out successfully.
+ *       400:
+ *         description: Bad Request if userId is invalid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Invalid userId
+ *       404:
+ *         description: Not Found if volunteerId does not exist
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Volunteer not found
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Server error
+ */
+
+
 
 // LOGOUT
 router.post('/logout', authenticateToken, async (req, res) => {

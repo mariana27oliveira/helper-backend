@@ -34,7 +34,7 @@ async function googleVerifyFunction(accessToken, refreshToken, profile, done) {
   try {
       const userRef = await db.collection('GoogleUsers').doc(googleId).get();
 
-      // Se o usuário não existir, cria um novo
+      // If user do not exist, creates a new one 
       if (!userRef.exists) {
           const userData = {
               displayName: displayName,
@@ -43,7 +43,6 @@ async function googleVerifyFunction(accessToken, refreshToken, profile, done) {
           await db.collection('GoogleUsers').doc(googleId).set(userData);
       }
 
-      // Adicionando uma mensagem de sucesso ao objeto de perfil
       profile.message = 'User logged in successfully!';
       return done(null, profile);
   } catch (err) {
