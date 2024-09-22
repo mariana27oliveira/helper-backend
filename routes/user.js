@@ -878,18 +878,18 @@ router.get('/requests', authenticateToken, async (req, res) => {
     .limit(1)
     .get();
 
-if (!cancelledSnapshot.empty) {
-    return res.status(200).send({ message: 'The request was cancelled' });
-}
-
-return res.status(200).send({ message: 'There is no ongoing request for this volunteer.' });
-
-
-    } catch (error) {
-        console.error('Error in finding request', error);
-        res.status(500).send({ error: 'Server error' });
+    if (!cancelledSnapshot.empty) {
+        return res.status(200).send({ message: 'The request was cancelled' });
     }
-});
+
+    return res.status(200).send({ message: 'There is no ongoing request for this volunteer.' });
+
+
+        } catch (error) {
+            console.error('Error in finding request', error);
+            res.status(500).send({ error: 'Server error' });
+        }
+    });
 
 
 /**
