@@ -197,6 +197,12 @@ router.post('/signup', async (req, res) => {
         // Generates a token JWT
         const jwtToken = generateAccessToken(newVolunteerRef.id);
 
+        // Store the FCM token in the database
+        await db.collection('Volunteers').doc(newVolunteerRef.id).set({
+            fcmToken: req.body.fcmToken
+        }, { merge: true });
+        
+        
         res.status(200).send({ 
             message: 'Volunteer added successfully',
             VolunteerID: newVolunteerRef.id,
@@ -218,9 +224,12 @@ function isValidPhoneNumber(phone) {
 }
 
 let googleLocation = {};
+let fcmTokenGoogle = {};
 
 router.get('/google', (req, res, next) => {
-    const { latitude, longitude } = req.query;
+    const { latitude, longitude, fcmToken } = req.query;
+    fcmTokenGoogle = fcmToken;
+    console.log(fcmTokenGoogle);
     console.log(`Localização do usuário: Latitude - ${latitude}, Longitude - ${longitude}`);
     if (latitude && longitude) {
         req.session.location = { latitude, longitude };
@@ -235,6 +244,14 @@ router.get('/google', (req, res, next) => {
 
 router.get('/google/redirect', passport.authenticate('volunteer-google'), async (req, res) => {
     const { id: googleId } = req.user;
+
+    volunteerSnapshot = await db.collection('Volunteers').doc(googleId).get();
+    if (volunteerSnapshot.exists) {
+        // Store the FCM token in the database
+        await db.collection('Volunteers').doc(googleId).set({
+            fcmTokenGoogle
+        }, { merge: true });
+    }
 
     const { latitude, longitude } = googleLocation || {};
     console.log(`Localização do usuário: Latitude - ${latitude}, Longitude - ${longitude}`);
@@ -343,6 +360,11 @@ router.patch('/add/:googleId', async (req, res) => {
           Points: 0,
           Badges: []
         });
+
+        // Store the FCM token in the database
+        await db.collection('Volunteers').doc(googleId).set({
+            fcmTokenGoogle
+        }, { merge: true });
 
     
         return res.status(201).send('Volunteer created successfully');
