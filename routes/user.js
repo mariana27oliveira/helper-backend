@@ -871,16 +871,25 @@ router.get('/requests', authenticateToken, async (req, res) => {
         }
     }
 
-    const cancelledSnapshot = await db.collection('Requests')
+// Searches for all the requests of the user, sorted by timestamp
+const userRequestsSnapshot = await db.collection('Requests')
     .where('UserID', '==', userId)
-    .where('Status', '==', 'cancelled')
-    .orderBy('acceptedTime', 'desc') 
-    .limit(1)
+    .orderBy('Timestamp', 'desc')  
+    .limit(1)  
     .get();
 
-    if (!cancelledSnapshot.empty) {
-        return res.status(200).send({ message: 'The request was cancelled' });
-    }
+if (userRequestsSnapshot.empty) {
+    return res.status(404).send({ message: 'No requests found for the user' });
+}
+
+const mostRecentRequest = userRequestsSnapshot.docs[0].data();
+
+// Verifies if the most recent request has status 'cancelled' 
+if (mostRecentRequest.Status === 'cancelled') {
+    return res.status(200).send(mostRecentRequest);
+}
+
+
 
     return res.status(200).send({ message: 'There is no ongoing request for this volunteer.' });
 
@@ -1611,15 +1620,20 @@ router.delete('/delete', authenticateToken, async (req, res) => {
             for (const doc of userRequestsSnapshot.docs) {
                 const request = doc.data();
     
-                // Fetch volunteer information
+            // Only fetch volunteer information if VolunteerID exists
+            if (request.VolunteerID) {
                 const volunteerSnapshot = await db.collection('Volunteers').doc(request.VolunteerID).get();
-                request.VolunteerName = volunteerSnapshot.exists ? volunteerSnapshot.data().Name : 'Unknown';
-    
+                if (volunteerSnapshot.exists) {
+                    volunteerName = volunteerSnapshot.data().Name || 'Unknown';
+                }
+            }    
                 // Get the location address
-                const { latitude, longitude } = request.Location;
+                const Location = request.Location;
+                const latitude = Location.latitude;
+                const longitude = Location.longitude;
                 let address = 'Unknown location';
                 try {
-                    const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${Location.latitude}&lon=${Location.longitude}`, {
+                    const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`, {
                         headers: {
                           'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' 
                         }
