@@ -1572,9 +1572,6 @@ router.delete('/delete', authenticateToken, async (req, res) => {
  *                   RequestID:
  *                     type: string
  *                     description: The ID of the request
- *                   Address:
- *                     type: string
- *                     description: The address of the request location
  *                   Status:
  *                     type: string
  *                     description: The status of the request
@@ -1582,9 +1579,6 @@ router.delete('/delete', authenticateToken, async (req, res) => {
  *                     type: string
  *                     format: date-time
  *                     description: The timestamp of the request
- *                   Duration:
- *                     type: string
- *                     description: The duration of the request
  *                   VolunteerName:
  *                     type: string
  *                     description: The name of the volunteer assigned to the request
@@ -1595,7 +1589,6 @@ router.delete('/delete', authenticateToken, async (req, res) => {
  *       500:
  *         description: Server error
  */
-
 
 
 // REQUEST HISTORY (LOCATION, TIMESTAMP, VOLUNTEER, STATUS, DURATION OF EACH REQUEST) - Organized by Month - OpenStreetMap Nominatim API
@@ -1620,42 +1613,30 @@ router.delete('/delete', authenticateToken, async (req, res) => {
             for (const doc of userRequestsSnapshot.docs) {
                 const request = doc.data();
     
-            // Only fetch volunteer information if VolunteerID exists
-            if (request.VolunteerID) {
-                const volunteerSnapshot = await db.collection('Volunteers').doc(request.VolunteerID).get();
-                if (volunteerSnapshot.exists) {
-                    volunteerName = volunteerSnapshot.data().Name || 'Unknown';
-                }
-            }    
-                // Get the location address
-                const Location = request.Location;
-                const latitude = Location.latitude;
-                const longitude = Location.longitude;
-                let address = 'Unknown location';
-                try {
-                    const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`, {
-                        headers: {
-                          'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' 
-                        }
-                      });                
-                      if (response.data) {
-                        address = response.data.display_name;
+                // Initialize volunteer name and address as 'Unknown'
+                let volunteerName = 'Unknown';
+    
+                // Only fetch volunteer information if VolunteerID exists
+                if (request.VolunteerID) {
+                    const volunteerSnapshot = await db.collection('Volunteers').doc(request.VolunteerID).get();
+                    if (volunteerSnapshot.exists) {
+                        volunteerName = volunteerSnapshot.data().Name || 'Unknown';
                     }
-                } catch (error) {
-                    console.error('Error fetching address:', error.message);
                 }
     
-                // Format the timestamp and extract the month and year in English and uppercase
-                const formattedTimestamp = DateTime.fromMillis(request.Timestamp._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss');
+    
+                // Format the timestamp and extract the date
+                const formattedTimestamp = request.Timestamp? 
+                    DateTime.fromMillis(request.Timestamp._seconds * 1000)
+                    .setZone('Europe/Lisbon')
+                    .toFormat('EEE, dd MMM yyyy HH:mm:ss') : 'Unknown';
     
                 // Create the request object
                 const requestObject = {
-                    RequestID: doc.id, 
-                    Address: address,
+                    RequestID: doc.id,
                     Status: request.Status,
                     Timestamp: formattedTimestamp,
-                    Duration: request.Duration || 'N/A',
-                    VolunteerName: request.VolunteerName
+                    VolunteerName: volunteerName
                 };
     
                 requests.push(requestObject);

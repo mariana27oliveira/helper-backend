@@ -2281,9 +2281,6 @@ router.delete('/delete', authenticateToken, async (req, res) => {
  *                   RequestID:
  *                     type: string
  *                     description: The ID of the request
- *                   Address:
- *                     type: string
- *                     description: The address of the request location
  *                   Status:
  *                     type: string
  *                     description: The status of the request
@@ -2291,9 +2288,6 @@ router.delete('/delete', authenticateToken, async (req, res) => {
  *                     type: string
  *                     format: date-time
  *                     description: The timestamp of the request
- *                   Duration:
- *                     type: string
- *                     description: The duration of the request
  *                   UserName:
  *                     type: string
  *                     description: The name of the user assigned to the request
@@ -2306,78 +2300,59 @@ router.delete('/delete', authenticateToken, async (req, res) => {
  */
 
 
-
 // REQUEST HISTORY (LOCATION, TIMESTAMP, USER, STATUS, DURATION OF EACH REQUEST) - Organized by Month - OpenStreetMap Nominatim API
 //router.get('/history/:volunteerId', async (req, res) => {
-router.get('/history', authenticateToken, async (req, res) => {
-    try {
-        //const volunteerId = req.params.volunteerId;
-        const volunteerId = req.volunteer.VolunteerId;
-        if (!volunteerId) {
-            return res.status(400).send({ error: 'Invalid volunteerId' });
-        }
-
-        const volunteerRequestsRef = db.collection('Requests').where('VolunteerID', '==', volunteerId);
-        const volunteerRequestsSnapshot = await volunteerRequestsRef.get();
-
-        if (volunteerRequestsSnapshot.empty) {
-            return res.status(404).send({ message: 'No requests found for the volunteer' });
-        }
-
-        const requests = [];
-
-        for (const doc of volunteerRequestsSnapshot.docs) {
-            const request = doc.data();
-
-            // Fetch user information
-            const userSnapshot = await db.collection('Users').doc(request.UserID).get();
-            request.UserName = userSnapshot.exists ? userSnapshot.data().Name : 'Unknown';
-
-            // Get the location address
-            const Location = request.Location;
-            const latitude = Location.latitude;
-            const longitude = Location.longitude;
-            let address = 'Unknown location';
-            try {
-                const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`, {
-                    headers: {
-                      'User-Agent': 'Helper (helper.mobile.app.2024@gmail.com)' 
-                    }
-                  });                
-                  if (response.data) {
-                    address = response.data.display_name;
-                }
-            } catch (error) {
-                console.error('Error fetching address:', error.message);
+    router.get('/history', authenticateToken, async (req, res) => {
+        try {
+            //const volunteerId = req.params.volunteerId;
+            const volunteerId = req.volunteer.VolunteerId;
+            if (!volunteerId) {
+                return res.status(400).send({ error: 'Invalid volunteerId' });
             }
-
-            // Format the timestamp and extract the month and year in English and uppercase
-            const formattedTimestamp = DateTime.fromMillis(request.Timestamp._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss');
-
-            // Create the request object
-            const requestObject = {
-                RequestID: doc.id, 
-                Address: address,
-                Status: request.Status,
-                Timestamp: formattedTimestamp,
-                Duration: request.Duration || 'N/A',
-                UserName: request.UserName
-            };
-
-            requests.push(requestObject);
+    
+            const volunteerRequestsRef = db.collection('Requests').where('VolunteerID', '==', volunteerId);
+            const volunteerRequestsSnapshot = await volunteerRequestsRef.get();
+    
+            if (volunteerRequestsSnapshot.empty) {
+                return res.status(404).send({ message: 'No requests found for the volunteer' });
+            }
+    
+            const requests = [];
+    
+            for (const doc of volunteerRequestsSnapshot.docs) {
+                const request = doc.data();
+    
+                // Fetch user information
+                const userSnapshot = await db.collection('Users').doc(request.UserID).get();
+                request.UserName = userSnapshot.exists ? userSnapshot.data().Name : 'Unknown';
+    
+    
+                // Format the timestamp and extract the month and year in English and uppercase
+                const formattedTimestamp = DateTime.fromMillis(request.Timestamp._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss');
+    
+                // Create the request object
+                const requestObject = {
+                    RequestID: doc.id, 
+                    Status: request.Status,
+                    Timestamp: formattedTimestamp,
+                    UserName: request.UserName
+                };
+    
+                requests.push(requestObject);
+            }
+    
+            // Sort requests by timestamp in descending order (most recent first)
+            requests.sort((a, b) => new Date(b.Timestamp) - new Date(a.Timestamp));
+    
+    
+            res.status(200).send(requests);
+    
+        } catch (error) {
+            console.error('Error in fetching requests', error);
+            res.status(500).send({ error: 'Server error' });
         }
+    });
 
-        // Sort requests by timestamp in descending order (most recent first)
-        requests.sort((a, b) => new Date(b.Timestamp) - new Date(a.Timestamp));
-
-
-        res.status(200).send(requests);
-
-    } catch (error) {
-        console.error('Error in fetching requests', error);
-        res.status(500).send({ error: 'Server error' });
-    }
-});
 
 
 /**
