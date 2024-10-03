@@ -788,10 +788,6 @@
                         "type": "string",
                         "description": "The ID of the request"
                       },
-                      "Address": {
-                        "type": "string",
-                        "description": "The address of the request location"
-                      },
                       "Status": {
                         "type": "string",
                         "description": "The status of the request"
@@ -800,10 +796,6 @@
                         "type": "string",
                         "format": "date-time",
                         "description": "The timestamp of the request"
-                      },
-                      "Duration": {
-                        "type": "string",
-                        "description": "The duration of the request"
                       },
                       "VolunteerName": {
                         "type": "string",
@@ -1992,10 +1984,6 @@
                         "type": "string",
                         "description": "The ID of the request"
                       },
-                      "Address": {
-                        "type": "string",
-                        "description": "The address of the request location"
-                      },
                       "Status": {
                         "type": "string",
                         "description": "The status of the request"
@@ -2004,10 +1992,6 @@
                         "type": "string",
                         "format": "date-time",
                         "description": "The timestamp of the request"
-                      },
-                      "Duration": {
-                        "type": "string",
-                        "description": "The duration of the request"
                       },
                       "UserName": {
                         "type": "string",

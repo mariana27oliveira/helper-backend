@@ -856,7 +856,12 @@ router.get('/requests', authenticateToken, async (req, res) => {
           });         
         if (response.data) {
             const address = response.data.display_name;
-            const formattedTimestamp = DateTime.fromMillis(requestData.Timestamp._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss');
+            const formattedTimestamp = DateTime.fromMillis(requestData.Timestamp._seconds * 1000)
+            .setZone('Europe/Lisbon')
+            .setLocale('pt') 
+            .toFormat('EEE, dd MMM yyyy HH:mm:ss'); 
+            //ENGLISH_VERSION
+            //const formattedTimestamp = DateTime.fromMillis(requestData.Timestamp._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss');
             const responseData = {
                 RequestID: request.id, // Adding the RequestID
                 Location: address,
