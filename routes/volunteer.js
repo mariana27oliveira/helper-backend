@@ -839,13 +839,19 @@ router.post('/activeRequests', authenticateToken, async (req, res) => {
 
             let timeElapsedString;
             if (timeElapsed < 60) {
-                timeElapsedString = `${timeElapsed} minutes ago`;
+                //ENGLISH_VERSION
+                //timeElapsedString = `${timeElapsed} minutes ago`;
+                timeElapsedString = `há ${timeElapsed} minutos`;
             } else if (timeElapsed < 1440) { // Less than 24 hours
                 const hoursElapsed = Math.floor(timeElapsed / 60);
-                timeElapsedString = `${hoursElapsed} hours ago`;
+                //ENGLISH_VERSION
+                //timeElapsedString = `${hoursElapsed} hours ago`;
+                timeElapsedString = `há ${hoursElapsed} horas`;
             } else {
                 const daysElapsed = Math.floor(timeElapsed / 1440);
-                timeElapsedString = `${daysElapsed} days ago`;
+                //ENGLISH_VERSION
+                //timeElapsedString = `${daysElapsed} days ago`;
+                timeElapsedString = `há ${daysElapsed} dias`;
             }
 
             // Calculate distance between volunteer and request location
@@ -975,13 +981,19 @@ function degreesToRadians(degrees) {
                 const timeElapsed = Math.floor((currentTime - requestTime) / 60000); // Time in minutes
                 let timeElapsedString;
                 if (timeElapsed < 60) {
-                    timeElapsedString = `${timeElapsed} minutes ago`;
+                    //ENGLISH_VERSION
+                    //timeElapsedString = `${timeElapsed} minutes ago`;
+                    timeElapsedString = `há ${timeElapsed} minutos`;
                 } else if (timeElapsed < 1440) { // Less than 24 hours
                     const hoursElapsed = Math.floor(timeElapsed / 60);
-                    timeElapsedString = `${hoursElapsed} hours ago`;
+                    //ENGLISH_VERSION
+                    //timeElapsedString = `${hoursElapsed} hours ago`;
+                    timeElapsedString = `há ${hoursElapsed} horas`;
                 } else {
                     const daysElapsed = Math.floor(timeElapsed / 1440);
-                    timeElapsedString = `${daysElapsed} days ago`;
+                    //ENGLISH_VERSION
+                    //timeElapsedString = `${daysElapsed} days ago`;
+                    timeElapsedString = `há ${daysElapsed} dias`;
                 }
                 // Calculate distance between volunteer and request location
                 const requestLat = requestData.Location.latitude;
@@ -1108,13 +1120,19 @@ router.get('/request_info/:requestId', authenticateToken, async (req, res) => {
         const timeElapsed = Math.floor((currentTime - requestTime) / 60000); // Time in minutes
         let timeElapsedString;
         if (timeElapsed < 60) {
-            timeElapsedString = `${timeElapsed} minutes ago`;
+            //ENGLISH_VERSION
+            //timeElapsedString = `${timeElapsed} minutes ago`;
+            timeElapsedString = `há ${timeElapsed} minutos`;
         } else if (timeElapsed < 1440) { // Less than 24 hours
             const hoursElapsed = Math.floor(timeElapsed / 60);
-            timeElapsedString = `${hoursElapsed} hours ago`;
+            //ENGLISH_VERSION
+            //timeElapsedString = `${hoursElapsed} hours ago`;
+            timeElapsedString = `há ${hoursElapsed} horas`;
         } else {
             const daysElapsed = Math.floor(timeElapsed / 1440);
-            timeElapsedString = `${daysElapsed} days ago`;
+            //ENGLISH_VERSION
+            //timeElapsedString = `${daysElapsed} days ago`;
+            timeElapsedString = `há ${daysElapsed} dias`;
         }
 
         // Calculate distance between volunteer and request location
@@ -1244,7 +1262,9 @@ router.get('/requests', authenticateToken, async (req, res) => {
           });          
         if (response.data) {
             const address = response.data.display_name;
-            const formattedTimestamp = DateTime.fromMillis(Timestamp._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss');
+            //ENGLISH_VERSION
+            //const formattedTimestamp = DateTime.fromMillis(Timestamp._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss');
+            const formattedTimestamp = DateTime.fromMillis(Timestamp._seconds * 1000).setZone('Europe/Lisbon').setLocale('pt').toFormat('EEE, dd MMM yyyy HH:mm:ss');
             const responseData = {
                 RequestID: request.id, // Adding the RequestID
                 Location: address,
@@ -1741,9 +1761,15 @@ router.get('/finished_request/:requestId', async (req, res) => {
         }
 
         // Use luxon to format the date to Portugal time zone (Europe/Lisbon)
-        const timestamp = DateTime.fromMillis(requestData.Timestamp._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss');
-        const acceptedTime = requestData.acceptedTime ? DateTime.fromMillis(requestData.acceptedTime._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss') : 'N/A';
-        const finishedTime = requestData.finishedTime ? DateTime.fromMillis(requestData.finishedTime._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss') : 'N/A';
+        //ENGLISH_VERSION
+        //const timestamp = DateTime.fromMillis(requestData.Timestamp._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss');
+        //const acceptedTime = requestData.acceptedTime ? DateTime.fromMillis(requestData.acceptedTime._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss') : 'N/A';
+        //const finishedTime = requestData.finishedTime ? DateTime.fromMillis(requestData.finishedTime._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss') : 'N/A';
+        
+        const timestamp = DateTime.fromMillis(requestData.Timestamp._seconds * 1000).setZone('Europe/Lisbon').setLocale('pt').toFormat('EEE, dd MMM yyyy HH:mm:ss');
+        const acceptedTime = requestData.acceptedTime ? DateTime.fromMillis(requestData.acceptedTime._seconds * 1000).setZone('Europe/Lisbon').setLocale('pt').toFormat('EEE, dd MMM yyyy HH:mm:ss') : 'N/A';
+        const finishedTime = requestData.finishedTime ? DateTime.fromMillis(requestData.finishedTime._seconds * 1000).setZone('Europe/Lisbon').setLocale('pt').toFormat('EEE, dd MMM yyyy HH:mm:ss') : 'N/A';      
+        
         const duration = requestData.Duration || 'N/A';
 
         // Convert location coordinates to an address using the Nominatim API
@@ -2328,8 +2354,10 @@ router.delete('/delete', authenticateToken, async (req, res) => {
     
     
                 // Format the timestamp and extract the month and year in English and uppercase
-                const formattedTimestamp = DateTime.fromMillis(request.Timestamp._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss');
-    
+                //ENGLISH_VERSION
+                //const formattedTimestamp = DateTime.fromMillis(request.Timestamp._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss');
+                const formattedTimestamp = DateTime.fromMillis(request.Timestamp._seconds * 1000).setZone('Europe/Lisbon').setLocale('pt').toFormat('EEE, dd MMM yyyy HH:mm:ss');
+
                 // Create the request object
                 const requestObject = {
                     RequestID: doc.id, 

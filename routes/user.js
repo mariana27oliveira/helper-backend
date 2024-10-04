@@ -1197,9 +1197,14 @@ router.get('/finished_request/:requestId', async (req, res) => {
         }
 
         // Use luxon to format the date to Portugal time zone (Europe/Lisbon)
-        const timestamp = DateTime.fromMillis(requestData.Timestamp._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss');
-        const acceptedTime = requestData.acceptedTime ? DateTime.fromMillis(requestData.acceptedTime._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss') : 'N/A';
-        const finishedTime = requestData.finishedTime ? DateTime.fromMillis(requestData.finishedTime._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss') : 'N/A';
+        //ENGLISH_VERSION
+        //const timestamp = DateTime.fromMillis(requestData.Timestamp._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss');
+        //const acceptedTime = requestData.acceptedTime ? DateTime.fromMillis(requestData.acceptedTime._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss') : 'N/A';
+        //const finishedTime = requestData.finishedTime ? DateTime.fromMillis(requestData.finishedTime._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss') : 'N/A';
+        const timestamp = DateTime.fromMillis(requestData.Timestamp._seconds * 1000).setZone('Europe/Lisbon').setLocale('pt').toFormat('EEE, dd MMM yyyy HH:mm:ss');
+        const acceptedTime = requestData.acceptedTime ? DateTime.fromMillis(requestData.acceptedTime._seconds * 1000).setZone('Europe/Lisbon').setLocale('pt').toFormat('EEE, dd MMM yyyy HH:mm:ss') : 'N/A';
+        const finishedTime = requestData.finishedTime ? DateTime.fromMillis(requestData.finishedTime._seconds * 1000).setZone('Europe/Lisbon').setLocale('pt').toFormat('EEE, dd MMM yyyy HH:mm:ss') : 'N/A';
+                
         const duration = requestData.Duration || 'N/A';
 
         // Convert location coordinates to an address using the Nominatim API
@@ -1632,10 +1637,10 @@ router.delete('/delete', authenticateToken, async (req, res) => {
     
                 // Format the timestamp and extract the date
                 const formattedTimestamp = request.Timestamp? 
-                    DateTime.fromMillis(request.Timestamp._seconds * 1000)
-                    .setZone('Europe/Lisbon')
-                    .toFormat('EEE, dd MMM yyyy HH:mm:ss') : 'Unknown';
-    
+                    //ENGLISH_VERSION    
+                    //DateTime.fromMillis(request.Timestamp._seconds * 1000).setZone('Europe/Lisbon').toFormat('EEE, dd MMM yyyy HH:mm:ss') : 'Unknown';
+                    DateTime.fromMillis(request.Timestamp._seconds * 1000).setZone('Europe/Lisbon').setLocale('pt').toFormat('EEE, dd MMM yyyy HH:mm:ss') : 'Unknown';
+
                 // Create the request object
                 const requestObject = {
                     RequestID: doc.id,
