@@ -99,7 +99,7 @@ const loggedInVolunteers = new Set(); // Stores the ids of the logged in volunte
  * @swagger
  * /volunteer/signup:
  *   post:
- *     summary: Create a new volunteer
+ *     summary: Create a new Volunteer
  *     tags: [Authentication]
  *     requestBody:
  *       required: true
@@ -380,7 +380,7 @@ router.patch('/add/:googleId', async (req, res) => {
  * @swagger
  * /volunteer/login:
  *   post:
- *     summary: Authenticate volunteer
+ *     summary: Authenticate Volunteer
  *     tags: [Authentication]
  *     requestBody:
  *       required: true
@@ -592,6 +592,43 @@ router.post('/forgot_password_1', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /volunteer/forgot_password_2:
+ *   post:
+ *     summary: Forgot Password (2)
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               volunteerId:
+ *                 type: string
+ *               verificationCode:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Verification code valid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 userId:
+ *                   type: string
+ *       400:
+ *         description: Invalid verification code
+ *       404:
+ *         description: Volunteer not found
+ *       500:
+ *         description: Server error
+ */
+
 
 router.post('/forgot_password_2', async (req, res) => {
     try {
@@ -703,7 +740,7 @@ router.post('/forgot_password_3/:volunteerId', async (req, res) => {
  * @swagger
  * /volunteer/activeRequests/{volunteerId}:
  *   post:
- *     summary: Get all active requests with status 'pendent' for a volunteer
+ *     summary: Get all active requests with status 'pendent' for a Volunteer
  *     tags: [Requests]
  *     parameters:
  *       - in: path
@@ -1027,7 +1064,7 @@ function degreesToRadians(degrees) {
  * @swagger
  * /volunteer/request_info/{volunteerId}/{requestId}:
  *   get:
- *     summary: Get request information including user name, time elapsed, distance, status, and Google Maps link
+ *     summary: Get request information 
  *     tags: [Requests]
  *     parameters:
  *       - in: path
@@ -1171,7 +1208,7 @@ router.get('/request_info/:requestId', authenticateToken, async (req, res) => {
  * @swagger
  * /volunteer/requests/{volunteerId}:
  *   get:
- *     summary: Get request information by volunteer ID
+ *     summary: Get request information by Volunteer ID
  *     tags: [Requests]
  *     parameters:
  *       - in: path
@@ -1313,7 +1350,7 @@ if (mostRecentRequest.Status === 'cancelled') {
  * @swagger
  * /volunteer/updateRequest/{requestId}:
  *   patch:
- *     summary: Update request status or add volunteer
+ *     summary: Update request status or add Volunteer ID
  *     tags: [Requests]
  *     parameters:
  *       - in: path
@@ -1558,16 +1595,12 @@ router.get('/request_points_badges/:requestId', async (req, res) => {
 
         const uniqueFinishedDates = [...new Set(finishedDates)];
         uniqueFinishedDates.sort((a, b) => new Date(a) - new Date(b)); // Sort dates
-        
-        
 
         let Badges = [];
-
         function isWeekend(date) {
             const day = date.getDay();
             return day === 0 || day === 6; // Sunday or Saturday
         }
-
         const volunteerDoc = await db.collection('Volunteers').doc(volunteerId).get();
         if (volunteerDoc.exists) {
             const currentBadges = volunteerDoc.data().Badges || [];
@@ -1577,7 +1610,6 @@ router.get('/request_points_badges/:requestId', async (req, res) => {
             const currentDate = new Date(uniqueFinishedDates[i]);
             const previousDate = new Date(uniqueFinishedDates[i - 1]);
             const differenceInDays = (currentDate - previousDate) / (1000 * 3600 * 24);
-
             if (differenceInDays === 1) {
                 consecutiveDays++;
                 if (consecutiveDays >= 10 && !currentBadges.includes('Legend of Dedication')) {
@@ -1838,7 +1870,7 @@ router.get('/finished_request/:requestId', async (req, res) => {
  * @swagger
  * /volunteer/reviews/{volunteerId}:
  *   get:
- *     summary: Get all reviews for a volunteer
+ *     summary: Get all reviews for a Volunteer
  *     tags: [Profile]
  *     parameters:
  *       - in: path
@@ -1953,7 +1985,7 @@ router.get('/reviews', authenticateToken, async (req, res) => {
  * @swagger
  * /volunteer/profile/{volunteerId}:
  *   get:
- *     summary: Get volunteer's profile information and average rating
+ *     summary: Get Volunteer's profile information and average rating
  *     tags: [Profile]
  *     parameters:
  *       - in: path
@@ -2231,7 +2263,7 @@ router.patch('/updatePassword', authenticateToken, async (req, res) => {
  * @swagger
  * /volunteer/delete:
  *   delete:
- *     summary: Delete a volunteer by ID
+ *     summary: Delete a Volunteer by ID
  *     tags: [Profile]
  *     parameters:
  *       - in: query
@@ -2253,6 +2285,7 @@ router.patch('/updatePassword', authenticateToken, async (req, res) => {
 
 
 // DELETE VOLUNTEER (volunteerID)
+//router.delete('/delete', async (req, res) => {
 router.delete('/delete', authenticateToken, async (req, res) => {
     try {
         //const { volunteerID } = req.query;
@@ -2261,6 +2294,19 @@ router.delete('/delete', authenticateToken, async (req, res) => {
         if (!volunteerID) {
             return res.status(400).send({ error: 'Invalid volunteer ID' });
         }
+
+        const requestsSnapshot = await db.collection('Requests')
+        .where('VolunteerID', '==', volunteerID)
+        .where('Status', '==', 'accepted')
+        .get();
+
+        const batch = db.batch(); 
+        requestsSnapshot.forEach(doc => {
+            const requestRef = db.collection('Requests').doc(doc.id);
+            batch.update(requestRef, { Status: 'cancelled' });
+        });
+
+        await batch.commit();
 
         const volunteerRef = db.collection('Volunteers').doc(volunteerID);
         const volunteerDoc = await volunteerRef.get();
@@ -2284,7 +2330,7 @@ router.delete('/delete', authenticateToken, async (req, res) => {
  * @swagger
  * /volunteer/history/{volunteerId}:
  *   get:
- *     summary: Get volunteer's request history ordered by most recent
+ *     summary: Get Volunteer's request history ordered by most recent
  *     tags: [Requests]
  *     parameters:
  *       - in: path
@@ -2387,7 +2433,7 @@ router.delete('/delete', authenticateToken, async (req, res) => {
  * @swagger
  * /volunteer/logout/{userId}:
  *   post:
- *     summary: Logout a volunteer
+ *     summary: Logout a Volunteer
  *     tags: [Authentication]
  *     parameters:
  *       - in: path

@@ -12,7 +12,7 @@
   "paths": {
     "/user/signup": {
       "post": {
-        "summary": "Create a new user",
+        "summary": "Create a new User",
         "tags": [
           "Authentication"
         ],
@@ -107,7 +107,7 @@
     },
     "/user/login": {
       "post": {
-        "summary": "Authenticate user",
+        "summary": "Authenticate User",
         "tags": [
           "Authentication"
         ],
@@ -192,6 +192,61 @@
           },
           "404": {
             "description": "Email not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/user/forgot_password_2": {
+      "post": {
+        "summary": "Forgot Password (2)",
+        "tags": [
+          "Authentication"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  },
+                  "verificationCode": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verification code valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "userId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid verification code"
+          },
+          "404": {
+            "description": "User not found"
           },
           "500": {
             "description": "Server error"
@@ -414,7 +469,7 @@
     },
     "/user/review/{userId}": {
       "post": {
-        "summary": "Create a review for the most recent request of a user",
+        "summary": "Create a review",
         "tags": [
           "Requests"
         ],
@@ -572,7 +627,7 @@
     },
     "/user/profile/{userId}": {
       "get": {
-        "summary": "Get user information",
+        "summary": "Get User's profile information",
         "tags": [
           "Profile"
         ],
@@ -725,7 +780,7 @@
     },
     "/user/delete": {
       "delete": {
-        "summary": "Delete a user by ID",
+        "summary": "Delete a User by ID",
         "tags": [
           "Profile"
         ],
@@ -758,7 +813,7 @@
     },
     "/user/history/{userId}": {
       "get": {
-        "summary": "Get user's request history ordered by most recent",
+        "summary": "Get User's request history ordered by most recent",
         "tags": [
           "Requests"
         ],
@@ -821,7 +876,7 @@
     },
     "/user/logout/{userId}": {
       "post": {
-        "summary": "Logout a user",
+        "summary": "Logout a User",
         "tags": [
           "Authentication"
         ],
@@ -906,7 +961,7 @@
     },
     "/volunteer/signup": {
       "post": {
-        "summary": "Create a new volunteer",
+        "summary": "Create a new Volunteer",
         "tags": [
           "Authentication"
         ],
@@ -1012,7 +1067,7 @@
     },
     "/volunteer/login": {
       "post": {
-        "summary": "Authenticate volunteer",
+        "summary": "Authenticate Volunteer",
         "tags": [
           "Authentication"
         ],
@@ -1104,6 +1159,61 @@
         }
       }
     },
+    "/volunteer/forgot_password_2": {
+      "post": {
+        "summary": "Forgot Password (2)",
+        "tags": [
+          "Authentication"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "volunteerId": {
+                    "type": "string"
+                  },
+                  "verificationCode": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verification code valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "userId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid verification code"
+          },
+          "404": {
+            "description": "Volunteer not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
     "/volunteer/forgot_password_3/{volunteerId}": {
       "post": {
         "summary": "Forgot Password (3)",
@@ -1157,7 +1267,7 @@
     },
     "/volunteer/activeRequests/{volunteerId}": {
       "post": {
-        "summary": "Get all active requests with status 'pendent' for a volunteer",
+        "summary": "Get all active requests with status 'pendent' for a Volunteer",
         "tags": [
           "Requests"
         ],
@@ -1304,7 +1414,7 @@
     },
     "/volunteer/request_info/{volunteerId}/{requestId}": {
       "get": {
-        "summary": "Get request information including user name, time elapsed, distance, status, and Google Maps link",
+        "summary": "Get request information",
         "tags": [
           "Requests"
         ],
@@ -1379,7 +1489,7 @@
     },
     "/volunteer/requests/{volunteerId}": {
       "get": {
-        "summary": "Get request information by volunteer ID",
+        "summary": "Get request information by Volunteer ID",
         "tags": [
           "Requests"
         ],
@@ -1450,7 +1560,7 @@
     },
     "/volunteer/updateRequest/{requestId}": {
       "patch": {
-        "summary": "Update request status or add volunteer",
+        "summary": "Update request status or add Volunteer ID",
         "tags": [
           "Requests"
         ],
@@ -1675,7 +1785,7 @@
     },
     "/volunteer/reviews/{volunteerId}": {
       "get": {
-        "summary": "Get all reviews for a volunteer",
+        "summary": "Get all reviews for a Volunteer",
         "tags": [
           "Profile"
         ],
@@ -1740,7 +1850,7 @@
     },
     "/volunteer/profile/{volunteerId}": {
       "get": {
-        "summary": "Get volunteer's profile information and average rating",
+        "summary": "Get Volunteer's profile information and average rating",
         "tags": [
           "Profile"
         ],
@@ -1921,7 +2031,7 @@
     },
     "/volunteer/delete": {
       "delete": {
-        "summary": "Delete a volunteer by ID",
+        "summary": "Delete a Volunteer by ID",
         "tags": [
           "Profile"
         ],
@@ -1954,7 +2064,7 @@
     },
     "/volunteer/history/{volunteerId}": {
       "get": {
-        "summary": "Get volunteer's request history ordered by most recent",
+        "summary": "Get Volunteer's request history ordered by most recent",
         "tags": [
           "Requests"
         ],
@@ -2017,7 +2127,7 @@
     },
     "/volunteer/logout/{userId}": {
       "post": {
-        "summary": "Logout a volunteer",
+        "summary": "Logout a Volunteer",
         "tags": [
           "Authentication"
         ],

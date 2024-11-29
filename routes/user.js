@@ -147,7 +147,7 @@ function authenticateToken(req, res, next) {
  * @swagger
  * /user/signup:
  *   post:
- *     summary: Create a new user
+ *     summary: Create a new User
  *     tags: [Authentication]
  *     requestBody:
  *       required: true
@@ -182,36 +182,29 @@ function authenticateToken(req, res, next) {
 router.post('/signup', async (req, res) => {
     try {
         const { Name, Email, Password, ConfirmPassword, PhoneContact } = req.body;
-        /*if (!Name || !Email || !Password || !PhoneContact) {
+        if (!Name || !Email || !Password || !PhoneContact) {
             return res.status(400).send({ error: 'All fields are required.' });
-        }*/
-
-        /*if (!isValidEmail(Email)) {
+        }
+        if (!isValidEmail(Email)) {
             return res.status(400).send({ error: 'Invalid email format.' });
-        }*/
-
+        }
         if (Password !== ConfirmPassword) {
             return res.status(400).send({ error: 'Passwords do not match.' });
         }
-        
-            const existingUserWithEmail = await db.collection('Users').where('Email', '==', Email).get();
+        const existingUserWithEmail = await db.collection('Users').where('Email', '==', Email).get();
         if (!existingUserWithEmail.empty) {
             return res.status(400).send({ error: 'Email already exists.' });
         }
-
         if (!isValidPhoneNumber(PhoneContact)) {
             return res.status(400).send({ error: 'Invalid phone number format.' });
         }
-
         const existingUserWithPhone = await db.collection('Users').where('PhoneContact', '==', PhoneContact).get();
         if (!existingUserWithPhone.empty) {
             return res.status(400).send({ error: 'Phone number already exists.' });
         }
-
         // Hash password before saving it in the data base
         const hashedPassword = await bcrypt.hash(Password, 10);
 
-        
         const newUserRef = await db.collection('Users').add({
             Name: Name,
             Password: hashedPassword,
@@ -241,7 +234,6 @@ router.post('/signup', async (req, res) => {
 function isValidPhoneNumber(phone) {
     return /^\d{9}$/.test(phone);
 }
-
 
 router.get('/google', passport.authenticate('user-google'));
 
@@ -348,7 +340,7 @@ router.patch('/add/:googleId', async (req, res) => {
  * @swagger
  * /user/login:
  *   post:
- *     summary: Authenticate user
+ *     summary: Authenticate User
  *     tags: [Authentication]
  *     requestBody:
  *       required: true
@@ -509,6 +501,43 @@ router.post('/forgot_password_1', async (req, res) => {
         return res.status(500).send({ error: 'Server error' });
     }
 });
+
+/**
+ * @swagger
+ * /user/forgot_password_2:
+ *   post:
+ *     summary: Forgot Password (2)
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *               verificationCode:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Verification code valid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 userId:
+ *                   type: string
+ *       400:
+ *         description: Invalid verification code
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
 
 
 router.post('/forgot_password_2', async (req, res) => {
@@ -713,7 +742,8 @@ router.post('/newRequest', authenticateToken, async (req, res) => {
         // Await for all asynchronous operations inside the forEach
         await Promise.all(volunteersSnapshot.docs.map(async (doc) => {
             const volunteerLocation = doc.data().Location;
-            const distance = calculateDistance(requestLocation.latitude, requestLocation.longitude, volunteerLocation.latitude, volunteerLocation.longitude);
+            const distance = calculateDistance(requestLocation.latitude, requestLocation.longitude, volunteerLocation.latitude, 
+                volunteerLocation.longitude);
             if (distance <= 1) { // If the distance is inferior to 1 km
                 nearbyVolunteers.push(doc.id); // Adds volunteer id to the list 
 
@@ -1007,7 +1037,7 @@ router.patch('/updateRequest/:requestId', async (req, res) => {
  * @swagger
  * /user/review/{userId}:
  *   post:
- *     summary: Create a review for the most recent request of a user
+ *     summary: Create a review 
  *     tags: [Requests]
  *     parameters:
  *       - in: path
@@ -1273,7 +1303,7 @@ router.get('/finished_request/:requestId', async (req, res) => {
  * @swagger
  * /user/profile/{userId}:
  *   get:
- *     summary: Get user information
+ *     summary: Get User's profile information
  *     tags: [Profile]
  *     parameters:
  *       - in: path
@@ -1503,7 +1533,7 @@ router.patch('/updatePassword', authenticateToken, async (req, res) => {
  * @swagger
  * /user/delete:
  *   delete:
- *     summary: Delete a user by ID
+ *     summary: Delete a User by ID
  *     tags: [Profile]
  *     parameters:
  *       - in: query
@@ -1536,6 +1566,19 @@ router.delete('/delete', authenticateToken, async (req, res) => {
             return res.status(400).send({ error: 'Invalid user ID' });
         }
 
+        const requestsSnapshot = await db.collection('Requests')
+        .where('UserID', '==', userID)
+        .where('Status', 'in', ['accepted', 'pendent']) 
+        .get();
+
+        const batch = db.batch();
+        requestsSnapshot.forEach(doc => {
+            const requestRef = db.collection('Requests').doc(doc.id);
+            batch.update(requestRef, { Status: 'cancelled' });
+        });
+
+        await batch.commit();
+
         const userRef = db.collection('Users').doc(userID);
         const userDoc = await userRef.get();
 
@@ -1559,7 +1602,7 @@ router.delete('/delete', authenticateToken, async (req, res) => {
  * @swagger
  * /user/history/{userId}:
  *   get:
- *     summary: Get user's request history ordered by most recent
+ *     summary: Get User's request history ordered by most recent
  *     tags: [Requests]
  *     parameters:
  *       - in: path
@@ -1669,7 +1712,7 @@ router.delete('/delete', authenticateToken, async (req, res) => {
  * @swagger
  * /user/logout/{userId}:
  *   post:
- *     summary: Logout a user
+ *     summary: Logout a User
  *     tags: [Authentication]
  *     parameters:
  *       - in: path
