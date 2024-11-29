@@ -227,9 +227,9 @@ router.post('/signup', async (req, res) => {
     }
 });
 
-/*function isValidEmail(email) {
+function isValidEmail(email) {
     return /\S+@\S+\.\S+/.test(email);
-}*/
+}
 
 function isValidPhoneNumber(phone) {
     return /^\d{9}$/.test(phone);
